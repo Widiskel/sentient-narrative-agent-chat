@@ -16,7 +16,11 @@ import { ChatInput } from "./ChatInput";
 import { streamSSE } from "../../lib/sse";
 import { ulid } from "../../lib/ulid";
 
-export function ChatWindow({ onBootChange }: { onBootChange?: (booting: boolean) => void }) {
+export function ChatWindow({
+  onBootChange,
+}: {
+  onBootChange?: (booting: boolean) => void;
+}) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -27,6 +31,8 @@ export function ChatWindow({ onBootChange }: { onBootChange?: (booting: boolean)
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const scrollNextRef = useRef(false);
   const autoFollowRef = useRef(true);
+  const userPausedFollowRef = useRef(false);
+  const lastScrollDistRef = useRef(0);
   const [session] = useState<SentientSession>(() => ({
     processor_id: "sentient-chat-client",
     activity_id: ulid(),
@@ -103,9 +109,12 @@ export function ChatWindow({ onBootChange }: { onBootChange?: (booting: boolean)
           return next;
         });
         scrollNextRef.current = true;
+        autoFollowRef.current = true;
+        userPausedFollowRef.current = false;
 
         const finalize = (reason?: string) => {
           console.debug("[chat] finalize", { reason });
+          userPausedFollowRef.current = false;
           GLOBAL_STREAM_ACTIVE = false;
           streamingRef.current = false;
           setLoading(false);
@@ -121,9 +130,6 @@ export function ChatWindow({ onBootChange }: { onBootChange?: (booting: boolean)
           ({ event, data }) => {
             try {
               const json: any = JSON.parse(data);
-              console.debug("EVENT : ", event);
-              console.debug("DATA : ", data);
-
               const eid = json?.id as string | undefined;
               const sid = (json?.stream_id as string | undefined) || "default";
               if (eid) {
@@ -344,11 +350,77 @@ export function ChatWindow({ onBootChange }: { onBootChange?: (booting: boolean)
     if (!el) return;
     const onScroll = () => {
       const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
-      autoFollowRef.current = dist <= 48;
+      if (userPausedFollowRef.current) {
+        if (streamingRef.current && dist <= 2) {
+          userPausedFollowRef.current = false;
+          autoFollowRef.current = true;
+        }
+      } else {
+        autoFollowRef.current = dist <= 48;
+      }
+      const prev = lastScrollDistRef.current;
+      if (Math.abs(dist - prev) > 16) {
+        lastScrollDistRef.current = dist;
+        if (
+          streamingRef.current &&
+          autoFollowRef.current &&
+          !userPausedFollowRef.current &&
+          prev <= 8 &&
+          dist > 80
+        ) {
+          userPausedFollowRef.current = true;
+          autoFollowRef.current = false;
+        }
+      }
     };
-    el.addEventListener('scroll', onScroll);
+    const cancelFollow = () => {
+      if (streamingRef.current) {
+        userPausedFollowRef.current = true;
+        autoFollowRef.current = false;
+      }
+    };
+    el.addEventListener("scroll", onScroll);
+    el.addEventListener("wheel", cancelFollow, { passive: true } as any);
+    el.addEventListener("touchstart", cancelFollow, { passive: true } as any);
+    el.addEventListener("mousedown", cancelFollow);
     onScroll();
-    return () => el.removeEventListener('scroll', onScroll);
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      el.removeEventListener("wheel", cancelFollow as any);
+      el.removeEventListener("touchstart", cancelFollow as any);
+      el.removeEventListener("mousedown", cancelFollow);
+    };
+  }, []);
+
+  useEffect(() => {
+    const cancel = () => {
+      if (streamingRef.current) {
+        userPausedFollowRef.current = true;
+        autoFollowRef.current = false;
+      }
+    };
+    const onWheel = () => cancel();
+    const onTouchMove = () => cancel();
+    const onKeyDown = (e: KeyboardEvent) => {
+      const keys = [
+        "PageUp",
+        "PageDown",
+        "Home",
+        "End",
+        "ArrowUp",
+        "ArrowDown",
+        " ",
+      ];
+      if (keys.includes(e.key)) cancel();
+    };
+    window.addEventListener("wheel", onWheel, { passive: true } as any);
+    window.addEventListener("touchmove", onTouchMove, { passive: true } as any);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("wheel", onWheel as any);
+      window.removeEventListener("touchmove", onTouchMove as any);
+      window.removeEventListener("keydown", onKeyDown);
+    };
   }, []);
 
   useEffect(() => {
@@ -359,7 +431,7 @@ export function ChatWindow({ onBootChange }: { onBootChange?: (booting: boolean)
   }, [messages.length]);
 
   useEffect(() => {
-    if (autoFollowRef.current && bottomRef.current) {
+    if (streamingRef.current && autoFollowRef.current && bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: "auto", block: "end" });
     }
   }, [messages]);
@@ -371,10 +443,18 @@ export function ChatWindow({ onBootChange }: { onBootChange?: (booting: boolean)
           <motion.div layoutId="brand-logo" className="relative">
             <div className="relative h-20 w-20 overflow-hidden rounded-full bg-white/5 ring-2 ring-white/20 shadow-inner">
               <div className="absolute inset-0 animate-ping rounded-full bg-sky-400/20" />
-              <Image src="/img/sentient_logo.jpg" alt="Sentient" fill sizes="80px" className="object-cover" />
+              <Image
+                src="/img/sentient_logo.jpg"
+                alt="Sentient"
+                fill
+                sizes="80px"
+                className="object-cover"
+              />
             </div>
           </motion.div>
-          <div className="mt-3 text-sm font-medium text-white/80">Sentient Narrative Agent</div>
+          <div className="mt-3 text-sm font-medium text-white/80">
+            Sentient Narrative Agent
+          </div>
         </div>
         <div className="mb-2 text-white/80">
           {bootText || "Preparing agent…"}
