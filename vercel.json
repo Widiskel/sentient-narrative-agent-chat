@@ -1,0 +1,16 @@
+{
+  "functions": {
+    "api/assist/**": {
+      "maxDuration": 60
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/assist",
+      "headers": {
+        "Cache-Control": "no-cache, no-transform"
+      }
+    }
+  ]
+}
+
