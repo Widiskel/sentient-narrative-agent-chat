@@ -1,7 +1,8 @@
 {
   "functions": {
     "app/api/assist/route.ts": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "regions": ["fra1"]
     }
   },
   "headers": [

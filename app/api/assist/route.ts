@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const preferredRegion = 'fra1';
 
 const ASSIST_API_URL =
   process.env.ASSIST_API_URL || "http://localhost:8000/assist";
