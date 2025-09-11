@@ -1,16 +1,15 @@
 {
   "functions": {
-    "api/assist/**": {
+    "app/api/assist/route.ts": {
       "maxDuration": 60
     }
   },
-  "routes": [
+  "headers": [
     {
-      "src": "/api/assist",
-      "headers": {
-        "Cache-Control": "no-cache, no-transform"
-      }
+      "source": "/api/assist",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-transform" }
+      ]
     }
   ]
 }
-
