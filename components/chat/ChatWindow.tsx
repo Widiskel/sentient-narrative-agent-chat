@@ -52,6 +52,9 @@ export function ChatWindow({
     ids: [],
     chunks: {},
   });
+  const [editableUserIdx, setEditableUserIdx] = useState<number | null>(null);
+  const [activeEditIdx, setActiveEditIdx] = useState<number | null>(null);
+  const [activeEditText, setActiveEditText] = useState<string>("");
 
   const invoke = useCallback(
     async (
@@ -67,6 +70,7 @@ export function ChatWindow({
       streamingRef.current = true;
       console.debug("[chat] invoke start", { prompt, renderUserMessage });
       setLoading(true);
+      setEditableUserIdx(null);
 
       if (renderUserMessage) {
         setMessages((prev) => [
@@ -312,9 +316,15 @@ export function ChatWindow({
 
   const cancel = useCallback(() => {
     try {
+      // mark last user message as editable after cancel
+      let lastUser = -1;
+      for (let i = messages.length - 1; i >= 0; i--) {
+        if (messages[i]?.role === "user") { lastUser = i; break; }
+      }
+      if (lastUser >= 0) setEditableUserIdx(lastUser);
       abortRef.current?.abort();
     } catch {}
-  }, []);
+  }, [messages]);
 
   useEffect(() => {
     if (initRef.current) return;
@@ -501,6 +511,28 @@ export function ChatWindow({
                   ? status ?? undefined
                   : undefined
               }
+              canEdit={i === editableUserIdx && m.role === 'user' && !loading}
+              isEditing={i === activeEditIdx && m.role === 'user'}
+              editText={i === activeEditIdx ? activeEditText : undefined}
+              onEdit={() => {
+                if (i === editableUserIdx && m.role === 'user') {
+                  setActiveEditIdx(i);
+                  setActiveEditText(m.content);
+                }
+              }}
+              onChangeEdit={(t) => {
+                if (i === activeEditIdx) setActiveEditText(t);
+              }}
+              onSubmitEdit={() => {
+                if (i === activeEditIdx) {
+                  setActiveEditIdx(null);
+                  setEditableUserIdx(null);
+                  send(activeEditText);
+                }
+              }}
+              onCancelEdit={() => {
+                if (i === activeEditIdx) setActiveEditIdx(null);
+              }}
             />
           </div>
         ))}

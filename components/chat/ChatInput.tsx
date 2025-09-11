@@ -1,17 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { forwardRef, useImperativeHandle, useState } from "react";
 
-export function ChatInput({
-  onSend,
-  onCancel,
-  loading,
-}: {
+export type ChatInputHandle = {
+  setText: (t: string) => void;
+  focus: () => void;
+};
+
+export const ChatInput = forwardRef<ChatInputHandle, {
   onSend: (text: string) => void;
   onCancel: () => void;
   loading: boolean;
-}) {
+}>(function ChatInput({ onSend, onCancel, loading }, ref) {
   const [text, setText] = useState("");
+
+  useImperativeHandle(ref, () => ({
+    setText: (t: string) => setText(t),
+    focus: () => {
+      const el = document.getElementById("chat-input-textarea") as HTMLTextAreaElement | null;
+      el?.focus();
+    },
+  }), []);
 
   return (
     <form
@@ -25,6 +34,7 @@ export function ChatInput({
       className="flex items-end gap-2 border-t border-white/10 pt-3"
     >
       <textarea
+        id="chat-input-textarea"
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
@@ -76,4 +86,4 @@ export function ChatInput({
       )}
     </form>
   );
-}
+});
