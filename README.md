@@ -2,6 +2,10 @@
 
 A lightweight web UI for interacting with the Sentient Narrative Agent : https://github.com/Widiskel/sentient-narrative-agent
 
+## Live Demo
+
+- https://sentient-agent-chat.vercel.app/
+
 ## Project Overview
 - Stack: Next.js (App Router) + TypeScript + Tailwind CSS + Framer Motion
 
