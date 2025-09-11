@@ -316,7 +316,6 @@ export function ChatWindow({
 
   const cancel = useCallback(() => {
     try {
-      // mark last user message as editable after cancel
       let lastUser = -1;
       for (let i = messages.length - 1; i >= 0; i--) {
         if (messages[i]?.role === "user") { lastUser = i; break; }
@@ -494,6 +493,17 @@ export function ChatWindow({
     return idx;
   })();
 
+  const hasUserMessage = messages.some((m) => m.role === 'user')
+  const showTemplates = !booting && !loading && !hasUserMessage
+  const templates: string[] = [
+    'Give me today trending cryptocurrency!',
+    'What do you think about $BTC ?',
+    'Analys $BTC ?',
+    'Any good news about $BTC ?',
+    'Give me sentiment analysis about $BTC?',
+    'What coin are trending now ?',
+  ]
+
   return (
     <div className="flex h-[calc(100vh-10rem)] flex-col">
       <div ref={listRef} className="mb-3 flex-1 space-y-2 overflow-y-auto p-2">
@@ -538,6 +548,22 @@ export function ChatWindow({
         ))}
         <div ref={bottomRef} />
       </div>
+      {showTemplates && (
+        <div className="mb-2 px-2">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none]" style={{ WebkitOverflowScrolling: 'touch' }}>
+            {templates.map((t, idx) => (
+              <button
+                key={idx}
+                onClick={() => send(t)}
+                className="min-w-[220px] shrink-0 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-left text-sm text-white/90 hover:bg-white/10 focus:outline-none"
+                title={t}
+              >
+                <span className="block w-[220px] truncate">{t}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <ChatInput onSend={send} onCancel={cancel} loading={loading} />
     </div>
   );
